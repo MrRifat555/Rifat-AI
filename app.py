@@ -2,83 +2,60 @@ import os
 import tempfile
 import streamlit as st
 from gtts import gTTS
-from streamlit_mic_recorder import mic_recorder
 from google import genai
 
-# Gemini Client
 client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
 )
 
-# Page Title
 st.set_page_config(
     page_title="Rifat AI",
-    page_icon="🤖"
+    page_icon="🤖",
+    layout="wide"
 )
 
-st.title("🤖 Rifat AI")
+st.title("🤖 Rifat AI v2.0")
 
-# Voice Recorder
-audio = mic_recorder(
-    start_prompt="🎤 কথা বলুন",
-    stop_prompt="⏹️ Stop",
-    key="mic"
-)
+# Chat History
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# Image Upload
-uploaded_file = st.file_uploader(
-    "🖼️ একটি ছবি আপলোড করুন",
-    type=["jpg", "jpeg", "png"]
-)
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-# Text Input
-question = st.text_input("আপনার প্রশ্ন লিখুন")
+prompt = st.chat_input("আপনার প্রশ্ন লিখুন...")
 
-# Send Button
-if st.button("Send"):
+if prompt:
 
-    if question or uploaded_file:
+    st.session_state.messages.append(
+        {"role":"user","content":prompt}
+    )
 
-        # Image AI
-        if uploaded_file:
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-            image_bytes = uploaded_file.read()
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=prompt
+    )
 
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=[
-                    "এই ছবিটি বাংলায় বিস্তারিতভাবে ব্যাখ্যা করো।",
-                    {
-                        "mime_type": uploaded_file.type,
-                        "data": image_bytes,
-                    },
-                ],
-            )
+    answer = response.text
 
-        # Normal Chat
-        else:
+    st.session_state.messages.append(
+        {"role":"assistant","content":answer}
+    )
 
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=question
-            )
+    with st.chat_message("assistant"):
+        st.markdown(answer)
 
-        answer = response.text
+    tts = gTTS(answer, lang="bn")
 
-        # Show Answer
-        st.success(answer)
+    tmp = tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=".mp3"
+    )
 
-        # Voice Output
-        tts = gTTS(
-            text=answer,
-            lang="bn"
-        )
+    tts.save(tmp.name)
 
-        tmp = tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=".mp3"
-        )
-
-        tts.save(tmp.name)
-
-        st.audio(tmp.name)
+    st.audio(tmp.name)
