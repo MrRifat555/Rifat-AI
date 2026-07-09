@@ -1,5 +1,6 @@
 import os
 import streamlit as st
+from streamlit_mic_recorder import mic_recorder
 from google import genai
 
 client = genai.Client(
@@ -7,6 +8,11 @@ client = genai.Client(
 )
 
 st.title("🤖 Rifat AI")
+
+audio = mic_recorder(
+    start_prompt="🎤 কথা বলুন",
+    stop_prompt="⏹️ Stop"
+)
 
 question = st.text_input("আপনার প্রশ্ন লিখুন")
 
