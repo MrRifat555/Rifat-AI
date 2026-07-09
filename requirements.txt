@@ -1,5 +1,5 @@
 streamlit
 google-genai
-streamlit-mic-recorder
 gtts
 Pillow
+streamlit-mic-recorder
