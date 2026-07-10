@@ -4,3 +4,4 @@ gtts
 Pillow
 pypdf
 streamlit-mic-recorder
+tavily-python
