@@ -6,43 +6,47 @@ from PIL import Image
 from pypdf import PdfReader
 from google import genai
 
+# Gemini Client
 client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
 )
 
+# Page Config
 st.set_page_config(
     page_title="Rifat AI",
     page_icon="🤖",
     layout="wide"
 )
 
-st.title("🤖 Rifat AI v3.0")
+st.title("🤖 Rifat AI v3.1")
 
-# ======================
+# ==========================
 # Image Upload
-# ======================
+# ==========================
 
 uploaded_image = st.file_uploader(
     "🖼️ ছবি আপলোড করুন",
     type=["jpg", "jpeg", "png"]
 )
 
+image = None
+
 if uploaded_image:
     image = Image.open(uploaded_image)
     st.image(image, caption="আপলোড করা ছবি", use_container_width=True)
 
-# ======================
+# ==========================
 # PDF Upload
-# ======================
+# ==========================
 
 uploaded_pdf = st.file_uploader(
     "📄 PDF আপলোড করুন",
     type=["pdf"]
 )
 
-# ======================
+# ==========================
 # Chat History
-# ======================
+# ==========================
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -56,88 +60,110 @@ prompt = st.chat_input("আপনার প্রশ্ন লিখুন...")
 if prompt:
 
     st.session_state.messages.append(
-        {"role": "user", "content": prompt}
+        {
+            "role": "user",
+            "content": prompt
+        }
     )
 
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # ======================
-    # PDF AI
-    # ======================
+    try:
 
-    if uploaded_pdf:
+        # ==========================
+        # PDF AI
+        # ==========================
 
-        reader = PdfReader(uploaded_pdf)
+        if uploaded_pdf:
 
-        pdf_text = ""
+            reader = PdfReader(uploaded_pdf)
 
-        for page in reader.pages:
-            text = page.extract_text()
-            if text:
-                pdf_text += text
+            pdf_text = ""
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=f"""
-এই PDF থেকে উত্তর দাও।
+            # শুধু প্রথম ৩ পৃষ্ঠা পড়বে
+            for page in reader.pages[:3]:
+
+                text = page.extract_text()
+
+                if text:
+                    pdf_text += text
+
+            # বেশি বড় হলে কেটে দাও
+            pdf_text = pdf_text[:12000]
+
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=f"""
+নিচের PDF-এর তথ্য ব্যবহার করে প্রশ্নের উত্তর দাও।
 
 PDF:
+
 {pdf_text}
 
 প্রশ্ন:
+
 {prompt}
 """
+            )
+
+        # ==========================
+        # Image AI
+        # ==========================
+
+        elif image:
+
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=[
+                    prompt,
+                    image
+                ]
+            )
+
+        # ==========================
+        # Normal Chat
+        # ==========================
+
+        else:
+
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
+
+        answer = response.text
+
+        st.session_state.messages.append(
+            {
+                "role": "assistant",
+                "content": answer
+            }
         )
 
-    # ======================
-    # Image AI
-    # ======================
+        with st.chat_message("assistant"):
+            st.markdown(answer)
 
-    elif uploaded_image:
+        # ==========================
+        # Voice Output
+        # ==========================
 
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=[
-                prompt,
-                image
-            ]
+        tts = gTTS(
+            text=answer,
+            lang="bn"
         )
 
-    # ======================
-    # Normal Chat
-    # ======================
-
-    else:
-
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt
+        tmp = tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix=".mp3"
         )
 
-    answer = response.text
+        tts.save(tmp.name)
 
-    st.session_state.messages.append(
-        {"role": "assistant", "content": answer}
-    )
+        st.audio(tmp.name)
 
-    with st.chat_message("assistant"):
-        st.markdown(answer)
+    except Exception as e:
 
-    # ======================
-    # Voice Output
-    # ======================
+        st.error("❌ AI উত্তর তৈরি করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।")
 
-    tts = gTTS(
-        text=answer,
-        lang="bn"
-    )
-
-    tmp = tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix=".mp3"
-    )
-
-    tts.save(tmp.name)
-
-    st.audio(tmp.name)
+        st.exception(e)
