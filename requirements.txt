@@ -3,3 +3,4 @@ google-genai
 gtts
 Pillow
 streamlit-mic-recorder
+pypdf
