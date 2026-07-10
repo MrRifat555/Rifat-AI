@@ -3,6 +3,7 @@ import tempfile
 import streamlit as st
 from gtts import gTTS
 from PIL import Image
+from pypdf import PdfReader
 from google import genai
 
 client = genai.Client(
@@ -15,9 +16,12 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🤖 Rifat AI v2.0")
+st.title("🤖 Rifat AI v3.0")
 
+# ======================
 # Image Upload
+# ======================
+
 uploaded_image = st.file_uploader(
     "🖼️ ছবি আপলোড করুন",
     type=["jpg", "jpeg", "png"]
@@ -27,7 +31,19 @@ if uploaded_image:
     image = Image.open(uploaded_image)
     st.image(image, caption="আপলোড করা ছবি", use_container_width=True)
 
+# ======================
+# PDF Upload
+# ======================
+
+uploaded_pdf = st.file_uploader(
+    "📄 PDF আপলোড করুন",
+    type=["pdf"]
+)
+
+# ======================
 # Chat History
+# ======================
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -46,7 +62,39 @@ if prompt:
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    if uploaded_image:
+    # ======================
+    # PDF AI
+    # ======================
+
+    if uploaded_pdf:
+
+        reader = PdfReader(uploaded_pdf)
+
+        pdf_text = ""
+
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                pdf_text += text
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=f"""
+এই PDF থেকে উত্তর দাও।
+
+PDF:
+{pdf_text}
+
+প্রশ্ন:
+{prompt}
+"""
+        )
+
+    # ======================
+    # Image AI
+    # ======================
+
+    elif uploaded_image:
 
         response = client.models.generate_content(
             model="gemini-2.5-flash",
@@ -55,6 +103,10 @@ if prompt:
                 image
             ]
         )
+
+    # ======================
+    # Normal Chat
+    # ======================
 
     else:
 
@@ -72,7 +124,10 @@ if prompt:
     with st.chat_message("assistant"):
         st.markdown(answer)
 
+    # ======================
     # Voice Output
+    # ======================
+
     tts = gTTS(
         text=answer,
         lang="bn"
