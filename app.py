@@ -89,9 +89,12 @@ uploaded_pdf = st.file_uploader(
 # ==========================
 # Chat History
 # ==========================
-
 if "messages" not in st.session_state:
+    st.session_state.messages = []
+
 if "memory" not in st.session_state:
+    st.session_state.memory = {}
+
     st.session_state.memory = {}
     st.session_state.messages = []
 
@@ -150,22 +153,17 @@ Memory:
 
 {memory_text}
 
-User:
-
-{prompt}
-"""
-)
-এই PDF ব্যবহার করে প্রশ্নের উত্তর দাও।
+নিচের PDF ব্যবহার করে প্রশ্নের উত্তর দাও।
 
 PDF:
 
 {pdf_text}
 
-প্রশ্ন:
+User Question:
 
 {prompt}
 """
-            )
+)
 
         # ==========================
         # Image AI
@@ -207,7 +205,15 @@ PDF:
 
             response = client.models.generate_content(
                 model="gemini-2.5-flash",
-                contents=prompt
+                contents=f"""
+Memory:
+
+{memory_text}
+
+User:
+
+{prompt}
+"""
             )
 
         answer = response.text
