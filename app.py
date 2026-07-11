@@ -91,7 +91,8 @@ uploaded_pdf = st.file_uploader(
 # ==========================
 
 if "messages" not in st.session_state:
-
+if "memory" not in st.session_state:
+    st.session_state.memory = {}
     st.session_state.messages = []
 
 for msg in st.session_state.messages:
@@ -99,7 +100,10 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
 
         st.markdown(msg["content"])
+memory_text = ""
 
+for key, value in st.session_state.memory.items():
+    memory_text += f"{key}: {value}\n"
 prompt = st.chat_input("💬 Ask Rifat AI...")
 # ==========================
 # User Message
@@ -140,8 +144,17 @@ if prompt:
             pdf_text = pdf_text[:12000]
 
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=f"""
+    model="gemini-2.5-flash",
+    contents=f"""
+Memory:
+
+{memory_text}
+
+User:
+
+{prompt}
+"""
+)
 এই PDF ব্যবহার করে প্রশ্নের উত্তর দাও।
 
 PDF:
