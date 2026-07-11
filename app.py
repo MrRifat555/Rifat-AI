@@ -6,7 +6,8 @@ from pypdf import PdfReader
 from gtts import gTTS
 from google import genai
 from google.genai import types
-
+import speech_recognition as sr
+from streamlit_mic_recorder import mic_recorder
 # ==========================
 # Gemini Client
 # ==========================
@@ -26,6 +27,11 @@ st.set_page_config(
 )
 
 st.title("🤖 Rifat AI v4.0")
+audio = mic_recorder(
+    start_prompt="🎤 কথা বলুন",
+    stop_prompt="⏹️ Stop",
+    key="voice"
+)
 st.caption("🚀 Chat • Image • PDF • Internet • Voice")
 
 # ==========================
